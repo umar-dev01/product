@@ -1,5 +1,6 @@
+const path = require("path");
 const dotenv = require("dotenv");
-dotenv.config({ path: "./config.env" });
+dotenv.config({ path: path.join(__dirname, "config.env") });
 const express = require("express");
 const mongoose = require("mongoose");
 const User = require("./models/usersModel");
@@ -10,6 +11,10 @@ const DB = process.env.DATABASE.replace(
   "<db_PASSWORD>",
   process.env.DATABASE_PASSWORD,
 );
+if (!process.env.DATABASE)
+  throw new Error("DATABASE missing. Check config.env loading.");
+if (!process.env.DATABASE_PASSWORD)
+  throw new Error("DATABASE_PASSWORD missing. Check config.env.");
 mongoose
   .connect(DB)
   .then(() => console.log(`DB connection successful!`))
