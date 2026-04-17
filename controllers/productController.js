@@ -1,9 +1,30 @@
 const Product = require("../models/productModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
+
+const normalizeProductImages = (productDoc) => {
+  const product = productDoc.toObject ? productDoc.toObject() : productDoc;
+  const legacyImage =
+    typeof product.image === "string" && product.image.trim() !== ""
+      ? product.image
+      : "";
+  const normalizedImages =
+    Array.isArray(product.images) && product.images.length > 0
+      ? product.images
+      : legacyImage
+        ? [legacyImage]
+        : [];
+
+  return {
+    ...product,
+    images: normalizedImages,
+    image: normalizedImages[0] || "",
+  };
+};
+
 exports.createProduct = catchAsync(async (req, res, next) => {
   const product = await Product.create(req.body);
-  res.status(201).json(product);
+  res.status(201).json(normalizeProductImages(product));
 });
 exports.getProducts = catchAsync(async (req, res, next) => {
   const queryObj = { ...req.query };
@@ -62,15 +83,16 @@ exports.getProducts = catchAsync(async (req, res, next) => {
   query = query.skip(skip).limit(limit);
 
   const products = await query;
+  const normalizedProducts = products.map(normalizeProductImages);
   const totalProducts = await Product.countDocuments(filter);
 
   res.status(200).json({
     status: "success",
-    results: products.length,
+    results: normalizedProducts.length,
     page,
     totalPages: Math.ceil(totalProducts / limit),
     totalProducts,
-    products,
+    products: normalizedProducts,
   });
 });
 
@@ -79,7 +101,7 @@ exports.getOneProducts = catchAsync(async (req, res, next) => {
   if (!product) {
     return next(new AppError("Product not found", 404));
   }
-  res.json(product);
+  res.json(normalizeProductImages(product));
 });
 exports.deleteProduct = catchAsync(async (req, res, next) => {
   const product = await Product.findById(req.params.id);
@@ -101,5 +123,5 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
   if (!updatedProduct) {
     return next(new AppError("Product not found", 404));
   }
-  res.json(updatedProduct);
+  res.json(normalizeProductImages(updatedProduct));
 });
