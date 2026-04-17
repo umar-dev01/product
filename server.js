@@ -7,14 +7,25 @@ const User = require("./models/usersModel");
 const Product = require("./models/productModel");
 const app = require("./app");
 
-const DB = process.env.DATABASE.replace(
-  "<db_PASSWORD>",
-  process.env.DATABASE_PASSWORD,
-);
-if (!process.env.DATABASE)
-  throw new Error("DATABASE missing. Check config.env loading.");
-if (!process.env.DATABASE_PASSWORD)
-  throw new Error("DATABASE_PASSWORD missing. Check config.env.");
+const databaseTemplate = process.env.DATABASE || process.env.DATABASE_LOCAL;
+
+if (!databaseTemplate) {
+  throw new Error(
+    "DATABASE or DATABASE_LOCAL missing. Check environment variables.",
+  );
+}
+
+if (
+  databaseTemplate.includes("<db_PASSWORD>") &&
+  !process.env.DATABASE_PASSWORD
+) {
+  throw new Error("DATABASE_PASSWORD missing. Check environment variables.");
+}
+
+const DB = databaseTemplate.includes("<db_PASSWORD>")
+  ? databaseTemplate.replace("<db_PASSWORD>", process.env.DATABASE_PASSWORD)
+  : databaseTemplate;
+
 mongoose
   .connect(DB)
   .then(() => console.log(`DB connection successful!`))

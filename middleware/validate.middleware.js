@@ -1,6 +1,6 @@
 const validate = (schema) => (req, res, next) => {
   try {
-    schema.parse(req.body);
+    req.body = schema.parse(req.body);
     next();
   } catch (err) {
     // Check if it is a ZodError
@@ -11,6 +11,8 @@ const validate = (schema) => (req, res, next) => {
       }));
       return res.status(400).json({ errors });
     }
+
+    next(err);
   }
 };
 module.exports = validate;
