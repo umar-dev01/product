@@ -1,8 +1,16 @@
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const Stripe = require("stripe");
 const Order = require("../models/orderModel");
 const catchAsync = require("../utils/catchAsync");
 const sendEmail = require("../utils/email");
 const AppError = require("../utils/appError");
+
+const getStripeClient = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new AppError("Stripe is not configured", 500);
+  }
+
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
+};
 exports.createPaymentIntent = catchAsync(async (req, res, next) => {
   const { orderId } = req.params;
   const order = await Order.findById(orderId);
@@ -24,6 +32,7 @@ exports.createPaymentIntent = catchAsync(async (req, res, next) => {
     );
   }
 
+  const stripe = getStripeClient();
   const paymentIntent = await stripe.paymentIntents.create({
     amount: Math.round(order.totalPrice * 100),
     currency: "pkr",
@@ -46,6 +55,7 @@ exports.stripeWebhook = catchAsync(async (req, res, next) => {
 
   let event;
   try {
+    const stripe = getStripeClient();
     event = stripe.webhooks.constructEvent(
       req.body,
       signature,
@@ -104,6 +114,7 @@ exports.confirmPayment = catchAsync(async (req, res, next) => {
   }
 
   // 2) Verify payment intent with Stripe
+  const stripe = getStripeClient();
   const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
   if (paymentIntent.status !== "succeeded") {

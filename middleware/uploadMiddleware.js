@@ -1,3 +1,5 @@
+const fs = require("fs/promises");
+const path = require("path");
 const multer = require("multer");
 const sharp = require("sharp");
 const AppError = require("../utils/appError");
@@ -7,6 +9,10 @@ const HIGH_QUALITY_JPEG = {
   progressive: true,
   mozjpeg: true,
   chromaSubsampling: "4:4:4",
+};
+
+const ensureDir = async (dirPath) => {
+  await fs.mkdir(dirPath, { recursive: true });
 };
 
 // Multer configuration
@@ -33,6 +39,9 @@ exports.resizeSingleImage = async (req, res, next) => {
 
   // Create unique filename
   const filename = `user-${Date.now()}.jpeg`;
+  const usersDir = path.join(__dirname, "..", "public", "images", "users");
+
+  await ensureDir(usersDir);
 
   // Process image with sharp
   await sharp(req.file.buffer)
@@ -43,7 +52,7 @@ exports.resizeSingleImage = async (req, res, next) => {
     })
     .toFormat("jpeg")
     .jpeg(HIGH_QUALITY_JPEG)
-    .toFile(`public/images/users/${filename}`);
+    .toFile(path.join(usersDir, filename));
 
   // Save filename to request body
   req.body.image = `/images/users/${filename}`;
@@ -54,6 +63,15 @@ exports.resizeMultipleImages = async (req, res, next) => {
   if (!req.files || req.files.length === 0) return next();
 
   req.body.images = [];
+  const productsDir = path.join(
+    __dirname,
+    "..",
+    "public",
+    "images",
+    "products",
+  );
+
+  await ensureDir(productsDir);
 
   for (const file of req.files) {
     const filename = `product-${Date.now()}-${Math.round(Math.random() * 1e9)}.jpeg`;
@@ -66,7 +84,7 @@ exports.resizeMultipleImages = async (req, res, next) => {
       })
       .toFormat("jpeg")
       .jpeg(HIGH_QUALITY_JPEG)
-      .toFile(`public/images/products/${filename}`);
+      .toFile(path.join(productsDir, filename));
 
     req.body.images.push(`/images/products/${filename}`);
   }
